@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>P2P Balance Manager</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00897B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="P2P Manager">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --primary:#00897B;--primary-dark:#00695C;--primary-light:#4DB6AC;
+  --usdt:#26A17B;--etb:#1E40AF;--success:#22C55E;--danger:#EF4444;
+  --warn:#F59E0B;--bg:#F4F6F8;--surface:#FFFFFF;
+  --text:#1A1A2E;--text2:#6B7280;--border:#E5E7EB;
+  --shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+#app{max-width:480px;margin:0 auto;min-height:100vh;position:relative}
+.header{background:var(--primary);color:#fff;padding:16px 16px 0;position:sticky;top:0;z-index:100}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.header-title{font-size:18px;font-weight:700}
+.header-sub{font-size:11px;opacity:.75;margin-top:1px}
+.header-actions{display:flex;gap:8px;align-items:center}
+.icon-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px}
+.icon-btn:active{background:rgba(255,255,255,.25)}
+.tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.2)}
+.tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:600;color:rgba(255,255,255,.65);border-bottom:2px solid transparent;cursor:pointer}
+.tab.active{color:#fff;border-bottom-color:#fff}
+.main{padding:12px;padding-bottom:90px}
+.card{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:10px}
+.hero{background:linear-gradient(135deg,var(--primary),var(--primary-light));border-radius:16px;padding:20px;color:#fff;margin-bottom:12px;cursor:pointer}
+.hero-label{font-size:11px;font-weight:700;letter-spacing:.8px;opacity:.8;text-transform:uppercase;margin-bottom:4px}
+.hero-name{font-size:22px;font-weight:800;margin-bottom:2px}
+.hero-date{font-size:13px;opacity:.75}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.metric{border-radius:12px;padding:12px}
+.metric-label{font-size:11px;font-weight:600;margin-bottom:6px}
+.metric-value{font-size:14px;font-weight:800;word-break:break-word}
+.metric-usdt{background:rgba(38,161,123,.1);color:var(--usdt)}
+.metric-etb{background:rgba(30,64,175,.1);color:var(--etb)}
+.metric-used{background:rgba(245,158,11,.1);color:var(--warn)}
+.metric-rem{background:rgba(34,197,94,.1);color:var(--success)}
+.metric-rem.negative{background:rgba(239,68,68,.1);color:var(--danger)}
+.item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)}
+.item:last-child{border-bottom:none}
+.avatar{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;font-weight:800}
+.avatar-circle{border-radius:50%;font-size:16px}
+.item-body{flex:1;min-width:0}
+.item-title{font-size:14px;font-weight:700}
+.item-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.item-right{text-align:right;flex-shrink:0}
+.item-time{font-size:11px;color:var(--text2);margin-bottom:6px}
+.del-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:2px}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;margin-right:4px;margin-top:3px}
+.badge-etb{background:rgba(30,64,175,.1);color:var(--etb)}
+.badge-rate{background:rgba(245,158,11,.1);color:var(--warn)}
+.badge-usdt{background:rgba(38,161,123,.1);color:var(--usdt)}
+.section-hdr{display:flex;justify-content:space-between;align-items:center;padding:4px 0 8px}
+.section-title{font-size:16px;font-weight:700}
+.session-item{display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer;border-bottom:1px solid var(--border)}
+.session-item:last-child{border-bottom:none}
+.session-dot{width:10px;height:10px;border-radius:50%;background:var(--primary);flex-shrink:0}
+.session-today{background:var(--success)}
+.fab{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));right:20px;width:56px;height:56px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(0,137,123,.4);display:flex;align-items:center;justify-content:center;z-index:90}
+.fab:active{transform:scale(.95)}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--surface);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:100}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px;cursor:pointer;color:var(--text2);font-size:10px;font-weight:600;gap:3px;border:none;background:none}
+.nav-item.active{color:var(--primary)}
+.nav-icon{font-size:22px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow-y:auto}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.modal-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:5px}
+.field input,.field textarea{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;background:#F8FAFC;outline:none;font-family:inherit}
+.field input:focus,.field textarea:focus{border-color:var(--primary)}
+.field input.error{border-color:var(--danger)}
+.err-msg{font-size:11px;color:var(--danger);margin-top:3px}
+.preview{background:rgba(38,161,123,.08);border:1px solid rgba(38,161,123,.2);border-radius:10px;padding:10px 14px;text-align:center;font-size:13px;font-weight:700;color:var(--usdt);margin-bottom:12px}
+.btn{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:700;border:none;cursor:pointer;font-family:inherit}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-row{display:flex;gap:10px}
+.btn-row .btn{flex:1}
+.btn-ghost{background:var(--bg);color:var(--text)}
+.warn-box{background:rgba(239,68,68,.08);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--danger);font-weight:600;margin-top:8px}
+.empty{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-icon{font-size:56px;margin-bottom:12px;opacity:.3}
+.empty-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.quick-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.action-card{background:var(--surface);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;box-shadow:var(--shadow)}
+.action-icon{font-size:26px;margin-bottom:6px}
+.action-label{font-size:11px;font-weight:600;color:var(--text)}
+.confirm-modal{background:var(--surface);border-radius:20px;width:calc(100% - 40px);max-width:340px;padding:20px;margin:auto}
+.overlay.center{align-items:center}
+.confirm-title{font-size:17px;font-weight:700;margin-bottom:8px}
+.confirm-body{font-size:14px;color:var(--text2);margin-bottom:20px}
+.stats-bar{background:linear-gradient(135deg,var(--primary),var(--primary-light));border-radius:16px;padding:16px;color:#fff;display:flex;justify-content:space-around;margin-bottom:12px}
+.stat-num{font-size:24px;font-weight:800}
+.stat-label{font-size:11px;opacity:.75}
+.month-label{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;padding:8px 0 6px}
+.snackbar{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:.3s;white-space:nowrap;max-width:90vw;text-align:center}
+.snackbar.show{opacity:1}
+.tab-content{display:none}.tab-content.active{display:block}
+.export-btn{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+
+/* Loading overlay */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.spinner{width:44px;height:44px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;font-weight:600;color:var(--text2)}
+
+/* Sync badge */
+.sync-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;display:flex;align-items:center;gap:4px}
+.sync-ok{background:rgba(34,197,94,.2);color:#16a34a}
+.sync-err{background:rgba(239,68,68,.2);color:var(--danger)}
+.sync-ing{background:rgba(0,137,123,.15);color:var(--primary)}
+
+/* Setup screen */
+.setup-screen{padding:30px 20px;text-align:center}
+.setup-icon{font-size:64px;margin-bottom:16px}
+.setup-title{font-size:22px;font-weight:800;margin-bottom:8px}
+.setup-sub{font-size:14px;color:var(--text2);margin-bottom:24px;line-height:1.6}
+.setup-card{background:var(--surface);border-radius:16px;padding:20px;text-align:left;box-shadow:var(--shadow);margin-bottom:16px}
+.setup-step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-text{font-size:13px;line-height:1.6;color:var(--text)}
+.step-text strong{color:var(--primary)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<button class="fab" id="fab" onclick="fabAction()">＋</button>
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-home" onclick="navigate('home')">
+    <span class="nav-icon">🏠</span>Home
+  </button>
+  <button class="nav-item" id="nav-history" onclick="navigate('history')">
+    <span class="nav-icon">🗂️</span>History
+  </button>
+</nav>
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal" onclick="event.stopPropagation()">
+    <div id="modal-body"></div>
+  </div>
+</div>
+<div class="overlay center" id="confirm-overlay" onclick="closeConfirm()">
+  <div class="confirm-modal" onclick="event.stopPropagation()">
+    <div class="confirm-title" id="confirm-title"></div>
+    <div class="confirm-body" id="confirm-body"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
+<div class="loading-overlay" id="loader" style="display:none">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loader-text">Syncing with Google Sheets…</div>
+</div>
+<div class="snackbar" id="snackbar"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+let API_URL = localStorage.getItem('p2p_api_url') || '';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let state = {
+  sessions: [], transfers: [], payments: [],
+  view: 'home', activeSessionId: null, activeTab: 'transfers',
+  syncing: false, syncOk: true, lastSync: null,
+};
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
+function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function fmtDate(s){try{const d=new Date(s+'T00:00:00');return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}catch{return s}}
+function fmtFullDate(s){try{const d=new Date(s+'T00:00:00');return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}catch{return s}}
+function fmtTime(iso){try{return new Date(iso).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}catch{return''}}
+function fmtUsdt(n){return`${Number(n).toLocaleString('en-US',{maximumFractionDigits:4})} USDT`}
+function fmtEtb(n){return`ETB ${Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`}
+function fmtRate(n){return Number(n).toLocaleString('en-US',{maximumFractionDigits:2})}
+function relDate(s){const t=todayStr();const y=new Date();y.setDate(y.getDate()-1);const ys=`${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;if(s===t)return'Today';if(s===ys)return'Yesterday';return fmtDate(s)}
+function initials(n){return(n||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}
+
+// ── Calculations ──────────────────────────────────────────────────────────────
+function calc(sid){
+  const transfers=state.transfers.filter(t=>t.sessionId===sid);
+  const payments=state.payments.filter(p=>p.sessionId===sid);
+  const totalUsdtSent=transfers.reduce((s,t)=>s+Number(t.amount),0);
+  const totalEtbSent=payments.reduce((s,p)=>s+Number(p.etbAmount),0);
+  const totalUsdtUsed=payments.reduce((s,p)=>s+Number(p.usdtUsed),0);
+  return{totalUsdtSent,totalEtbSent,totalUsdtUsed,remainingUsdt:totalUsdtSent-totalUsdtUsed,transfers,payments};
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function apiCall(action, data={}){
+  if(!API_URL) throw new Error('No API URL');
+  const encoded = encodeURIComponent(JSON.stringify(data));
+  const url = `${API_URL}?action=${action}&data=${encoded}`;
+  const res = await fetch(url, {redirect:'follow'});
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error||'API error');
+  return json.data;
+}
+
+async function loadAll(){
+  showLoader('Loading data from Google Sheets…');
+  try{
+    const d = await apiCall('getAll');
+    state.sessions  = (d.sessions  || []).sort((a,b)=>b.date.localeCompare(a.date));
+    state.transfers = d.transfers || [];
+    state.payments  = d.payments  || [];
+    state.syncOk    = true;
+    state.lastSync  = new Date();
+  }catch(e){
+    state.syncOk = false;
+    showSnack('⚠️ Could not load data: '+e.message);
+  }finally{hideLoader();}
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function navigate(view, sid){
+  state.view=view; state.activeSessionId=sid||null;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  if(view==='home'||view==='session') document.getElementById('nav-home').classList.add('active');
+  if(view==='history') document.getElementById('nav-history').classList.add('active');
+  render();
+}
+
+function render(){
+  if(!API_URL){renderSetup();return;}
+  if(state.view==='home')    renderHome();
+  else if(state.view==='session') renderSession();
+  else if(state.view==='history') renderHistory();
+}
+
+// ── Sync badge ────────────────────────────────────────────────────────────────
+function syncBadgeHtml(){
+  if(!state.lastSync) return '';
+  if(!state.syncOk) return`<span class="sync-badge sync-err">✗ Sync error</span>`;
+  return`<span class="sync-badge sync-ok">✓ Synced</span>`;
+}
+
+// ── Setup Screen ──────────────────────────────────────────────────────────────
+function renderSetup(){
+  document.getElementById('fab').style.display='none';
+  document.getElementById('app').innerHTML=`
+  <div class="header"><div class="header-top"><div>
+    <div class="header-title">P2P Balance Manager</div>
+    <div class="header-sub">Cloud Setup</div>
+  </div></div></div>
+  <div class="main">
+    <div class="setup-screen">
+      <div class="setup-icon">☁️</div>
+      <div class="setup-title">Connect to Google Sheets</div>
+      <div class="setup-sub">Your data will be shared across all phones in real time using a free Google Sheet as the database.</div>
+    </div>
+    <div class="setup-card">
+      <div class="setup-step"><div class="step-num">1</div><div class="step-text">Open <strong>Google Sheets</strong> → create a new blank spreadsheet → name it <strong>P2P Manager</strong></div></div>
+      <div class="setup-step"><div class="step-num">2</div><div class="step-text">Click <strong>Extensions → Apps Script</strong> → delete all code → paste the <strong>Code.gs</strong> file content</div></div>
+      <div class="setup-step"><div class="step-num">3</div><div class="step-text">Click <strong>Deploy → New deployment</strong> → Type: <strong>Web app</strong> → Execute as: <strong>Me</strong> → Who has access: <strong>Anyone</strong> → Deploy</div></div>
+      <div class="setup-step"><div class="step-num">4</div><div class="step-text">Copy the <strong>Web app URL</strong> and paste it below</div></div>
+    </div>
+    <div class="field">
+      <label>Paste your Web App URL here</label>
+      <textarea id="api-url-input" rows="3" placeholder="https://script.google.com/macros/s/..." style="resize:none;font-size:13px"></textarea>
+      <div class="err-msg" id="url-err"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveApiUrl()">Connect & Start</button>
+  </div>`;
+}
+
+async function saveApiUrl(){
+  const url = document.getElementById('api-url-input').value.trim();
+  if(!url||!url.startsWith('https://')){
+    document.getElementById('url-err').textContent='Please paste a valid URL';
+    return;
+  }
+  API_URL = url;
+  localStorage.setItem('p2p_api_url', url);
+  await loadAll();
+  navigate('home');
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function renderHome(){
+  const todaySess = state.sessions.find(s=>s.date===todayStr());
+  document.getElementById('fab').style.display='flex';
+
+  let heroHtml='';
+  if(todaySess){
+    const c=calc(todaySess.id);
+    const rem=c.remainingUsdt<0?'negative':'';
+    heroHtml=`<div class="hero" onclick="navigate('session','${todaySess.id}')">
+      <div class="hero-label">Today's Session</div>
+      <div class="hero-name">${todaySess.employeeName}</div>
+      <div class="hero-date">${fmtFullDate(todaySess.date)}</div>
+      <div class="summary-grid" style="margin-top:14px;margin-bottom:0" onclick="event.stopPropagation()">
+        <div class="metric metric-usdt"><div class="metric-label">↑ USDT Sent</div><div class="metric-value">${fmtUsdt(c.totalUsdtSent)}</div></div>
+        <div class="metric metric-etb"><div class="metric-label">💸 ETB Sent</div><div class="metric-value">${fmtEtb(c.totalEtbSent)}</div></div>
+        <div class="metric metric-used"><div class="metric-label">⇄ USDT Used</div><div class="metric-value">${fmtUsdt(c.totalUsdtUsed)}</div></div>
+        <div class="metric metric-rem ${rem}"><div class="metric-label">💰 Remaining</div><div class="metric-value">${fmtUsdt(c.remainingUsdt)}</div></div>
+      </div>
+    </div>`;
+  }else{
+    heroHtml=`<div class="hero" onclick="showCreateSession()">
+      <div class="hero-label">No Session Today</div>
+      <div class="hero-name">Start Now</div>
+      <div class="hero-date">${fmtFullDate(todayStr())}</div>
+    </div>`;
+  }
+
+  const recent=state.sessions.slice(0,5);
+  const listHtml=recent.map(s=>`
+    <div class="session-item" onclick="navigate('session','${s.id}')">
+      <div class="session-dot ${s.date===todayStr()?'session-today':''}"></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:700">${s.employeeName}</div>
+      <div style="font-size:12px;color:var(--text2)">${relDate(s.date)}</div></div>
+      <span style="color:var(--text2);font-size:20px">›</span>
+    </div>`).join('');
+
+  document.getElementById('app').innerHTML=`
+  <div class="header">
+    <div class="header-top">
+      <div><div class="header-title">P2P Balance Manager</div><div class="header-sub">Crypto Merchant Dashboard</div></div>
+      <div class="header-actions">
+        ${syncBadgeHtml()}
+        <button class="icon-btn" onclick="refreshData()" title="Refresh">🔄</button>
+        <button class="icon-btn" onclick="navigate('history')">🗂️</button>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    ${heroHtml}
+    <div class="quick-actions">
+      <div class="action-card" onclick="showCreateSession()"><div class="action-icon">📋</div><div class="action-label">New Session</div></div>
+      <div class="action-card" onclick="navigate('history')"><div class="action-icon">🗂️</div><div class="action-label">History</div></div>
+      <div class="action-card" onclick="refreshData()"><div class="action-icon">🔄</div><div class="action-label">Refresh</div></div>
+    </div>
+    ${state.sessions.length>0?`
+      <div class="section-hdr">
+        <div class="section-title">Recent Sessions</div>
+        ${state.sessions.length>5?`<span style="font-size:13px;color:var(--primary);cursor:pointer;font-weight:600" onclick="navigate('history')">View All</span>`:''}
+      </div>
+      <div class="card">${listHtml}</div>`:`
+      <div class="empty"><div class="empty-icon">📭</div><div class="empty-title">No sessions yet</div><div class="empty-sub">Tap "New Session" to get started</div></div>`}
+  </div>`;
+}
+
+async function refreshData(){
+  await loadAll();
+  render();
+  showSnack('✓ Data refreshed');
+}
+
+// ── SESSION ───────────────────────────────────────────────────────────────────
+function renderSession(){
+  const session=state.sessions.find(s=>s.id===state.activeSessionId);
+  if(!session){navigate('home');return;}
+  const c=calc(session.id);
+  const rem=c.remainingUsdt<0?'negative':'';
+  document.getElementById('fab').style.display='flex';
+
+  const transfersHtml=c.transfers.length===0
+    ?`<div class="empty" style="padding:30px 20px"><div class="empty-icon">📤</div><div class="empty-title">No transfers yet</div><div class="empty-sub">Tap + to add USDT sent to employee</div></div>`
+    :c.transfers.map(t=>`
+      <div class="item">
+        <div class="avatar" style="background:rgba(38,161,123,.12);color:var(--usdt)">₮</div>
+        <div class="item-body"><div class="item-title">${fmtUsdt(t.amount)}</div><div class="item-sub">${t.note||'USDT Transfer'}</div></div>
+        <div class="item-right"><div class="item-time">${fmtTime(t.createdAt)}</div>
+        <button class="del-btn" onclick="doDelete('transfer','${t.id}','this transfer')">🗑</button></div>
+      </div>`).join('');
+
+  const paymentsHtml=c.payments.length===0
+    ?`<div class="empty" style="padding:30px 20px"><div class="empty-icon">👥</div><div class="empty-title">No payments yet</div><div class="empty-sub">Tap + to add a customer payment</div></div>`
+    :c.payments.map(p=>`
+      <div class="item">
+        <div class="avatar avatar-circle" style="background:rgba(139,92,246,.12);color:#7C3AED">${initials(p.customerName)}</div>
+        <div class="item-body">
+          <div class="item-title">${p.customerName}</div>
+          ${p.phoneNumber?`<div class="item-sub">${p.phoneNumber}</div>`:''}
+          <div><span class="badge badge-etb">${fmtEtb(Number(p.etbAmount))}</span><span class="badge badge-rate">÷ ${fmtRate(p.etbRate)} ETB/USDT</span></div>
+          <div><span class="badge badge-usdt">= ${fmtUsdt(Number(p.usdtUsed))} used</span>${p.note?`<span style="font-size:11px;color:var(--text2)"> ${p.note}</span>`:''}</div>
+        </div>
+        <div class="item-right"><div class="item-time">${fmtTime(p.createdAt)}</div>
+        <button class="del-btn" onclick="doDelete('payment','${p.id}','this payment')">🗑</button></div>
+      </div>`).join('');
+
+  document.getElementById('app').innerHTML=`
+  <div class="header">
+    <div class="header-top">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="icon-btn" onclick="navigate('home')">‹</button>
+        <div><div class="header-title">${session.employeeName}</div><div class="header-sub">${fmtDate(session.date)}</div></div>
+      </div>
+      <div class="header-actions">${syncBadgeHtml()}
+        <button class="icon-btn" onclick="showExportMenu('${session.id}')">⋯</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab ${state.activeTab==='transfers'?'active':''}" onclick="setTab('transfers')">📤 Transfers</div>
+      <div class="tab ${state.activeTab==='payments'?'active':''}" onclick="setTab('payments')">👥 Payments</div>
+    </div>
+  </div>
+  <div class="main" style="padding-top:8px">
+    <div class="summary-grid">
+      <div class="metric metric-usdt"><div class="metric-label">↑ USDT Sent</div><div class="metric-value">${fmtUsdt(c.totalUsdtSent)}</div></div>
+      <div class="metric metric-etb"><div class="metric-label">💸 ETB Sent</div><div class="metric-value">${fmtEtb(c.totalEtbSent)}</div></div>
+      <div class="metric metric-used"><div class="metric-label">⇄ USDT Used</div><div class="metric-value">${fmtUsdt(c.totalUsdtUsed)}</div></div>
+      <div class="metric metric-rem ${rem}"><div class="metric-label">💰 Remaining</div><div class="metric-value">${fmtUsdt(c.remainingUsdt)}</div></div>
+    </div>
+    ${c.remainingUsdt<0?`<div class="warn-box">⚠️ USDT used exceeds amount sent!</div>`:''}
+    <div class="tab-content ${state.activeTab==='transfers'?'active':''}" id="tab-transfers"><div class="card">${transfersHtml}</div></div>
+    <div class="tab-content ${state.activeTab==='payments'?'active':''}" id="tab-payments"><div class="card">${paymentsHtml}</div></div>
+  </div>`;
+}
+
+function setTab(t){state.activeTab=t;renderSession();}
+
+// ── HISTORY ───────────────────────────────────────────────────────────────────
+function renderHistory(){
+  const sessions=state.sessions;
+  document.getElementById('fab').style.display='flex';
+  const total=sessions.length;
+  const now=new Date();
+  const thisMonth=sessions.filter(s=>{try{const d=new Date(s.date+'T00:00:00');return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()}catch{return false}}).length;
+  const employees=new Set(sessions.map(s=>s.employeeName)).size;
+  const groups={};
+  sessions.forEach(s=>{try{const d=new Date(s.date+'T00:00:00');const k=d.toLocaleDateString('en-US',{month:'long',year:'numeric'});if(!groups[k])groups[k]=[];groups[k].push(s);}catch{}});
+  const groupsHtml=Object.entries(groups).map(([m,list])=>`
+    <div class="month-label">${m}</div>
+    <div class="card">${list.map(s=>`
+      <div class="session-item" onclick="navigate('session','${s.id}')">
+        <div class="session-dot ${s.date===todayStr()?'session-today':''}"></div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px">${s.employeeName}
+            ${s.date===todayStr()?`<span style="background:var(--primary);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px">TODAY</span>`:''}
+          </div>
+          <div style="font-size:12px;color:var(--text2)">${fmtDate(s.date)}</div>
+        </div>
+        <button onclick="event.stopPropagation();doDelete('session','${s.id}','session for ${s.employeeName}')" style="background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;padding:4px">🗑</button>
+        <span style="color:var(--text2);font-size:20px">›</span>
+      </div>`).join('')}</div>`).join('');
+
+  document.getElementById('app').innerHTML=`
+  <div class="header">
+    <div class="header-top">
+      <div><div class="header-title">Session History</div><div class="header-sub">All sessions</div></div>
+      <div class="header-actions">${syncBadgeHtml()}
+        <button class="icon-btn" onclick="refreshData()">🔄</button>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="stats-bar">
+      <div style="text-align:center"><div class="stat-num">${total}</div><div class="stat-label">Total</div></div>
+      <div style="text-align:center"><div class="stat-num">${thisMonth}</div><div class="stat-label">This Month</div></div>
+      <div style="text-align:center"><div class="stat-num">${employees}</div><div class="stat-label">Employees</div></div>
+    </div>
+    ${sessions.length===0?`<div class="empty"><div class="empty-icon">🗂️</div><div class="empty-title">No history yet</div></div>`:groupsHtml}
+  </div>`;
+}
+
+// ── FAB ───────────────────────────────────────────────────────────────────────
+function fabAction(){
+  if(state.view==='session') showAddMenu();
+  else showCreateSession();
+}
+
+function showAddMenu(){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">Add to Session</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn" style="background:rgba(38,161,123,.1);color:var(--usdt)" onclick="closeModal();showAddTransfer()">↑ Add USDT Transfer</button>
+      <button class="btn" style="background:rgba(139,92,246,.1);color:#7C3AED" onclick="closeModal();showAddPayment()">👤 Add Customer Payment</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`;
+  openModal();
+}
+
+// ── Create Session ────────────────────────────────────────────────────────────
+function showCreateSession(){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">📋 New Daily Session</div>
+    <div class="field"><label>Employee Name</label>
+    <input type="text" id="s-name" placeholder="e.g. Abebe Kebede" autocomplete="off">
+    <div class="err-msg" id="s-name-err"></div></div>
+    <div class="field"><label>Session Date</label>
+    <input type="date" id="s-date" value="${todayStr()}" max="${todayStr()}"></div>
+    <button class="btn btn-primary" id="s-save-btn" onclick="saveSession()">Create Session</button>`;
+  openModal();
+  setTimeout(()=>document.getElementById('s-name').focus(),300);
+}
+
+async function saveSession(){
+  const name=document.getElementById('s-name').value.trim();
+  const date=document.getElementById('s-date').value;
+  if(!name){document.getElementById('s-name-err').textContent='Name is required';return;}
+  const btn=document.getElementById('s-save-btn');
+  btn.disabled=true;btn.textContent='Saving…';
+  const session={id:uid(),date,employeeName:name,createdAt:new Date().toISOString()};
+  try{
+    await apiCall('addSession',session);
+    state.sessions.unshift(session);
+    state.sessions.sort((a,b)=>b.date.localeCompare(a.date));
+    closeModal();
+    navigate('session',session.id);
+    showSnack('✓ Session created');
+  }catch(e){btn.disabled=false;btn.textContent='Create Session';showSnack('⚠️ Error: '+e.message);}
+}
+
+// ── Add Transfer ──────────────────────────────────────────────────────────────
+function showAddTransfer(){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">₮ Add USDT Transfer</div>
+    <div class="field"><label>USDT Amount Sent</label>
+    <input type="number" id="t-amount" placeholder="0.00" min="0.000001" step="any" inputmode="decimal">
+    <div class="err-msg" id="t-err"></div></div>
+    <div class="field"><label>Note (optional)</label>
+    <input type="text" id="t-note" placeholder="e.g. Daily allocation"></div>
+    <button class="btn btn-primary" id="t-save-btn" onclick="saveTransfer()">Save Transfer</button>`;
+  openModal();
+  setTimeout(()=>document.getElementById('t-amount').focus(),300);
+}
+
+async function saveTransfer(){
+  const amt=parseFloat(document.getElementById('t-amount').value);
+  if(!amt||amt<=0){document.getElementById('t-err').textContent='Enter a valid amount > 0';return;}
+  const btn=document.getElementById('t-save-btn');
+  btn.disabled=true;btn.textContent='Saving…';
+  const note=document.getElementById('t-note').value.trim();
+  const transfer={id:uid(),sessionId:state.activeSessionId,amount:amt,note:note||'',createdAt:new Date().toISOString()};
+  try{
+    await apiCall('addTransfer',transfer);
+    state.transfers.push(transfer);
+    closeModal();renderSession();showSnack('✓ Transfer added');
+  }catch(e){btn.disabled=false;btn.textContent='Save Transfer';showSnack('⚠️ Error: '+e.message);}
+}
+
+// ── Add Payment ───────────────────────────────────────────────────────────────
+function showAddPayment(){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">👤 Add Customer Payment</div>
+    <div class="field"><label>Customer Name</label>
+    <input type="text" id="p-name" placeholder="Full name" autocomplete="off">
+    <div class="err-msg" id="p-name-err"></div></div>
+    <div class="field"><label>Phone Number (optional)</label>
+    <input type="tel" id="p-phone" placeholder="+251..."></div>
+    <div class="field"><label>ETB Amount Sent</label>
+    <input type="number" id="p-etb" placeholder="0.00" min="0.01" step="any" inputmode="decimal" oninput="updPrev()">
+    <div class="err-msg" id="p-etb-err"></div></div>
+    <div class="field"><label>Exchange Rate (ETB per 1 USDT)</label>
+    <input type="number" id="p-rate" placeholder="e.g. 135" min="0.01" step="any" inputmode="decimal" oninput="updPrev()">
+    <div class="err-msg" id="p-rate-err"></div></div>
+    <div id="p-preview" style="display:none" class="preview">USDT used = —</div>
+    <div class="field"><label>Reference / Note (optional)</label>
+    <input type="text" id="p-note" placeholder="e.g. TXN-001"></div>
+    <button class="btn btn-primary" id="p-save-btn" onclick="savePayment()">Save Payment</button>`;
+  openModal();
+  setTimeout(()=>document.getElementById('p-name').focus(),300);
+}
+
+function updPrev(){
+  const etb=parseFloat(document.getElementById('p-etb').value)||0;
+  const rate=parseFloat(document.getElementById('p-rate').value)||0;
+  const prev=document.getElementById('p-preview');
+  if(etb>0&&rate>0){prev.style.display='block';prev.textContent=`USDT used = ${fmtUsdt(etb/rate)}`;}
+  else prev.style.display='none';
+}
+
+async function savePayment(){
+  let ok=true;
+  const name=document.getElementById('p-name').value.trim();
+  const etb=parseFloat(document.getElementById('p-etb').value);
+  const rate=parseFloat(document.getElementById('p-rate').value);
+  if(!name){document.getElementById('p-name-err').textContent='Required';ok=false;}
+  if(!etb||etb<=0){document.getElementById('p-etb-err').textContent='Enter amount > 0';ok=false;}
+  if(!rate||rate<=0){document.getElementById('p-rate-err').textContent='Enter rate > 0';ok=false;}
+  if(!ok)return;
+  const btn=document.getElementById('p-save-btn');
+  btn.disabled=true;btn.textContent='Saving…';
+  const phone=document.getElementById('p-phone').value.trim();
+  const note=document.getElementById('p-note').value.trim();
+  const payment={id:uid(),sessionId:state.activeSessionId,customerName:name,phoneNumber:phone||'',etbAmount:etb,etbRate:rate,usdtUsed:parseFloat((etb/rate).toFixed(6)),note:note||'',createdAt:new Date().toISOString()};
+  try{
+    await apiCall('addPayment',payment);
+    state.payments.push(payment);
+    closeModal();renderSession();showSnack('✓ Payment added');
+  }catch(e){btn.disabled=false;btn.textContent='Save Payment';showSnack('⚠️ Error: '+e.message);}
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+function doDelete(type,id,label){
+  document.getElementById('confirm-title').textContent='Delete?';
+  document.getElementById('confirm-body').textContent=`Delete ${label}? This cannot be undone.`;
+  document.getElementById('confirm-ok').onclick=async()=>{
+    closeConfirm();
+    showLoader('Deleting…');
+    try{
+      if(type==='transfer'){
+        await apiCall('deleteTransfer',{id});
+        state.transfers=state.transfers.filter(t=>t.id!==id);
+        renderSession();
+      }else if(type==='payment'){
+        await apiCall('deletePayment',{id});
+        state.payments=state.payments.filter(p=>p.id!==id);
+        renderSession();
+      }else if(type==='session'){
+        await apiCall('deleteSession',{id});
+        state.sessions=state.sessions.filter(s=>s.id!==id);
+        state.transfers=state.transfers.filter(t=>t.sessionId!==id);
+        state.payments=state.payments.filter(p=>p.sessionId!==id);
+        if(state.view==='session') navigate('home');
+        else renderHistory();
+      }
+      showSnack('✓ Deleted');
+    }catch(e){showSnack('⚠️ Error: '+e.message);}
+    finally{hideLoader();}
+  };
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+
+function closeConfirm(){document.getElementById('confirm-overlay').classList.remove('open');}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function showExportMenu(sid){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">⋯ Session Options</div>
+    <button class="export-btn" style="width:100%;margin-bottom:10px" onclick="exportCSV('${sid}')">📊 Export CSV</button>
+    <button class="btn btn-ghost" style="margin-bottom:10px" onclick="doDelete('session','${sid}','this session');closeModal()">🗑️ Delete Session</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>`;
+  openModal();
+}
+
+function exportCSV(sid){
+  const session=state.sessions.find(s=>s.id===sid);
+  if(!session)return;
+  const c=calc(sid);
+  let csv=`P2P Balance Manager\nDate,${session.date}\nEmployee,${session.employeeName}\n\n`;
+  csv+=`=== SUMMARY ===\nTotal USDT Sent,${c.totalUsdtSent}\nTotal ETB Sent,${c.totalEtbSent}\nTotal USDT Used,${c.totalUsdtUsed}\nRemaining USDT,${c.remainingUsdt}\n\n`;
+  csv+=`=== USDT TRANSFERS ===\nAmount,Note,Time\n`;
+  c.transfers.forEach(t=>{csv+=`${t.amount},${t.note||''},${fmtTime(t.createdAt)}\n`;});
+  csv+=`\n=== CUSTOMER PAYMENTS ===\nCustomer,Phone,ETB Sent,Rate,USDT Used,Note,Time\n`;
+  c.payments.forEach(p=>{csv+=`${p.customerName},${p.phoneNumber||''},${p.etbAmount},${p.etbRate},${p.usdtUsed},${p.note||''},${fmtTime(p.createdAt)}\n`;});
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`p2p_${session.date}_${session.employeeName.replace(/ /g,'_')}.csv`;
+  a.click();URL.revokeObjectURL(url);
+  closeModal();showSnack('✓ CSV downloaded');
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(){document.getElementById('overlay').classList.add('open');}
+function closeModal(e){if(e&&e.target!==document.getElementById('overlay'))return;document.getElementById('overlay').classList.remove('open');}
+
+// ── Loader ────────────────────────────────────────────────────────────────────
+function showLoader(msg='Loading…'){const l=document.getElementById('loader');document.getElementById('loader-text').textContent=msg;l.style.display='flex';}
+function hideLoader(){document.getElementById('loader').style.display='none';}
+
+// ── Snackbar ──────────────────────────────────────────────────────────────────
+function showSnack(msg){const s=document.getElementById('snackbar');s.textContent=msg;s.classList.add('show');setTimeout(()=>s.classList.remove('show'),2500);}
+
+// ── Service Worker ────────────────────────────────────────────────────────────
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async()=>{
+  if(API_URL){
+    await loadAll();
+    navigate('home');
+  } else {
+    render();
+  }
+})();
+</script>
+</body>
+</html>
